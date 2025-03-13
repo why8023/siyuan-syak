@@ -1,8 +1,8 @@
 {
-  "name": "plugin-sample-vite-svelte",
-  "author": "frostime",
-  "url": "https://github.com/siyuan-note/plugin-sample-vite-svelte",
-  "version": "0.3.6",
+  "name": "siyuan-syak",
+  "author": "why8023",
+  "url": "https://github.com/why8023/siyuan-syak",
+  "version": "0.1.0",
   "minAppVersion": "3.0.12",
   "backends": [
     "windows",
@@ -21,12 +21,12 @@
     "desktop-window"
   ],
   "displayName": {
-    "en_US": "Plugin sample with vite and svelte",
-    "zh_CN": "插件样例 vite + svelte 版"
+    "en_US": "SiYuan to Anki Sync",
+    "zh_CN": "思源笔记Anki同步"
   },
   "description": {
-    "en_US": "SiYuan plugin sample with vite and svelte",
-    "zh_CN": "使用 vite 和 svelte 开发的思源插件样例"
+    "en_US": "Export SiYuan notebook flashcards to Anki",
+    "zh_CN": "将思源笔记中的闪卡同步到Anki"
   },
   "readme": {
     "en_US": "README.md",
@@ -38,8 +38,10 @@
     ]
   },
   "keywords": [
-    "plugin",
-    "sample",
-    "插件样例"
+    "anki",
+    "flashcard",
+    "sync",
+    "闪卡",
+    "同步"
   ]
 }
