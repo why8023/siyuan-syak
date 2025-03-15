@@ -1,6 +1,7 @@
 /**
  * 导入所需的模块和组件
  */
+import { SYAK } from "@/syak";
 import {
     Plugin,                // 思源笔记插件基类
     showMessage,           // 显示消息提示
@@ -45,14 +46,16 @@ export default class PluginSample extends Plugin {
     private isMobile: boolean;                 // 是否为移动端
     private blockIconEventBindThis = this.blockIconEvent.bind(this);  // 绑定this的块图标事件处理函数
     private settingUtils: SettingUtils;        // 设置工具实例
+    private syak: SYAK;                        // 思源插件实例
 
     /**
      * 插件加载时执行的方法
      */
     async onload() {
+        // 初始化SYAK
+        this.syak = new SYAK("", 680, 8765, "siyuan");
         // 初始化插件数据
         this.data[STORAGE_NAME] = { readonlyText: "Readonly" };
-
         console.log("loading plugin-sample", this.i18n);
 
         // 检测当前前端环境
@@ -552,10 +555,10 @@ export default class PluginSample extends Plugin {
         // 添加对话框菜单项
         menu.addItem({
             icon: "iconInfo",
-            label: "Dialog(open help first)",
+            label: "syak",
             accelerator: this.commands[0].customHotkey,
             click: () => {
-                this.showDialog();
+                this.syak.run();
             }
         });
         
