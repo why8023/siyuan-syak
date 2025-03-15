@@ -150,74 +150,6 @@ export class SYAK {
     }
 
     /*
-    create anki deck
-    */
-    async createAnkiDeck(deck: string[]): Promise<void> {
-        // 为每个牌组创建请求
-        // 使用 deck 进行 map 操作, 返回结果
-        let createDeckParams = deck.map(x => {
-            return {
-                "action": "createDeck",
-                "version": 6,
-                "params": { "deck": x },
-            };
-        });
-        // 使用 multi 操作批量执行
-        this.actionsParams.set("createDeck", { "action": "multi", "version": 6, "params": { "actions": createDeckParams } });
-        console.log(this.actionsParams);
-    }
-
-    /*
-    get anki deck info
-    */
-    async getAnkiDeckInfo(deck: string[], preserve_deck: string[] = ["default"]): Promise<string[]> {
-        // 为每个牌组创建请求
-        let findCardsParams = deck.map(x => {
-            return {
-                "action": "findCards",
-                "version": 6,
-                "params": { "query": `"deck:${x}"` },
-            };
-        });
-        // 获取牌组信息
-        let cardsInfoResp = await this.request_anki({ "action": "multi", "version": 6, "params": { "actions": findCardsParams } });
-        let cardsInfo = cardsInfoResp.data.result;
-        // 提取牌组信息到列表
-        let deckInfo = cardsInfo.map(x => {
-            return {
-                "deck": x.deck,
-                "count": x.result.length,
-            };
-        });
-
-        // 找出空牌组且不匹配保留模式的牌组
-        let delDeck = deckInfo.filter(x => x.count == 0 && !preserve_deck.includes(x.deck));
-        console.log(delDeck);
-
-        return delDeck;
-    }
-
-    /*  
-    delete anki deck
-    */
-    async deleteAnkiDeck(deck: string[]): Promise<void> {
-        // 为每个牌组创建请求
-        let deleteDeckParams = deck.map(x => {
-            return {
-                "action": "deleteDeck",
-                "version": 6,
-                "params": {
-                    "decks": x,
-                    "cardsToo": true // 同时删除牌组中的卡片
-                },
-            };
-        });
-        // 使用 multi 操作批量执行
-        this.actionsParams.set("deleteDeck", { "action": "multi", "version": 6, "params": { "actions": deleteDeckParams } });
-        console.log(this.actionsParams);
-    }
-
-    /*
     media from blocks
     */
     async mediaFromBlocks(blocks: any[]): Promise<void> {
@@ -245,115 +177,6 @@ export class SYAK {
         });
         // 使用 multi 操作批量执行
         this.actionsParams.set("storeMediaFile", { "action": "multi", "version": 6, "params": { "actions": mediaParams } });
-        console.log(this.actionsParams);
-    }
-
-    /*
-    merge parent blocks
-    */
-    async mergeParentBlocks(blocks: any[]): Promise<any[]> {
-        // 获取所有父块ID
-        let parentIds = blocks.map(x => x.parent_id);
-
-        // 查询父块信息
-        let sqlQuery = `SELECT * FROM blocks WHERE id IN (${parentIds.map(id => `'${id}'`).join(',')}) AND type IN ('l', 'i', 'b', 's')`;
-        let parentBlocks = await sql(sqlQuery);
-
-        // 创建父块映射，用于快速查找
-        let parentMap = new Map();
-        parentBlocks.forEach(parent => {
-            parentMap.set(parent.id, {
-                parent_id: parent.id,
-                parent_markdown: parent.markdown,
-                parent_updated: parent.updated,
-                parent_hash: parent.hash
-            });
-        });
-
-        // 合并父块信息到子块
-        let mergedBlocks = blocks.map(block => {
-            let parent = parentMap.get(block.parent_id);
-            if (parent) {
-                // 父块存在，合并信息
-                return {
-                    ...block,
-                    parent_markdown: parent.parent_markdown,
-                    parent_updated: parent.parent_updated,
-                    parent_hash: parent.parent_hash,
-                    URL_id: block.parent_id
-                };
-            } else {
-                // 父块不存在，使用默认值
-                return {
-                    ...block,
-                    parent_markdown: "",
-                    parent_updated: "",
-                    parent_hash: "",
-                    URL_id: block.id
-                };
-            }
-        });
-
-        return mergedBlocks;
-    }
-
-
-
-    /*
-    update anki deck
-    */
-    async updateAnkiDeck(deck: Map<string, string>[]): Promise<void> {
-        // 按牌组分组
-        let deckGroups = new Map<string, string[]>();
-
-        // 遍历每个卡片，按牌组分组
-        deck.forEach(item => {
-            const deckName = item.get("deck");
-            const cardId = item.get("cards");
-
-            if (!deckGroups.has(deckName)) {
-                deckGroups.set(deckName, []);
-            }
-
-            deckGroups.get(deckName).push(cardId);
-        });
-
-        // 为每个牌组创建更改请求
-        let changeDeckParams = Array.from(deckGroups.entries()).map(([deckName, cards]) => {
-            return {
-                "action": "changeDeck",
-                "version": 6,
-                "params": {
-                    "cards": cards,
-                    "deck": deckName,
-                }
-            };
-        });
-
-        // 使用multi操作批量执行
-        this.actionsParams.set("changeDeck", {
-            "action": "multi",
-            "version": 6,
-            "params": { "actions": changeDeckParams }
-        });
-
-        console.log(this.actionsParams);
-    }
-
-    /*
-    删除Anki笔记
-    */
-    async deleteAnkiNotes(noteIds: string[]): Promise<void> {
-        // 创建删除笔记的请求
-        const deleteNotesJson = {
-            "action": "deleteNotes",
-            "version": 6,
-            "params": { "notes": noteIds },
-        };
-
-        // 保存到actions参数中
-        this.actionsParams.set("deleteNotes", deleteNotesJson);
-
         console.log(this.actionsParams);
     }
 
@@ -596,6 +419,34 @@ export class SYAK {
         let createDeckResp = await this.request_anki(this.actionsParams.get("createDecks"));
         if (createDeckResp.status != 200) {
             console.error("createDeckResp: ", createDeckResp.data);
+            return;
+        }
+        // test create card
+        let testCreateCardResp = await this.request_anki({
+            "action": "addNote",
+            "version": 6,
+            "params": {
+                "note": {
+                    "deckName": "test1",
+                    "modelName": this.ankiModel,
+                    "fields": {
+                        "Front": "test",
+                        "Back": "test",
+                    },
+                    "options": {
+                        "allowDuplicate": false,
+                        "duplicateScope": "deck",
+                        "duplicateScopeOptions": {
+                            "deckName": "Default",
+                            "checkChildren": false,
+                            "checkAllModels": false
+                        }
+                    },
+                }
+            }
+        });
+        if (testCreateCardResp.status != 200) {
+            console.error("testCreateCardResp: ", testCreateCardResp.data);
             return;
         }
         // 创建卡片
