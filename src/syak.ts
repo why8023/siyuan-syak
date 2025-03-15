@@ -132,19 +132,19 @@ export class SYAK {
         // 提取笔记信息到列表
         ankiCards.forEach(x => {
             let cardInfo = new Map<string, string>();
-            cardInfo.set("syak_front", x.fields.syak_front);
-            cardInfo.set("syak_back", x.fields.syak_back);
-            cardInfo.set("syak_anki_id", x.NoteId);
-            cardInfo.set("syak_id", x.fields.id);
-            cardInfo.set("syak_parent_id", x.fields.parent_id);
-            cardInfo.set("syak_root_id", x.fields.root_id);
-            cardInfo.set("syak_box", x.fields.box);
-            cardInfo.set("syak_deck", x.fields.deck);
-            cardInfo.set("syak_type", x.fields.type);
-            cardInfo.set("syak_subtype", x.fields.subtype);
-            cardInfo.set("syak_created", x.fields.created);
-            cardInfo.set("syak_updated", x.fields.updated);
-            ankiCardsInfo.set(cardInfo.get("syak_id"), cardInfo);
+            cardInfo["syak_front"] = x.fields.syak_front.value;
+            cardInfo["syak_back"] = x.fields.syak_back.value;
+            cardInfo["syak_anki_id"] = x.note;
+            cardInfo["syak_id"] = x.fields.syak_id.value;
+            cardInfo["syak_parent_id"] = x.fields.syak_parent_id.value;
+            cardInfo["syak_root_id"] = x.fields.syak_root_id.value;
+            cardInfo["syak_box"] = x.fields.syak_box.value;
+            cardInfo["syak_deck"] = x.fields.syak_deck.value;
+            cardInfo["syak_type"] = x.fields.syak_type.value;
+            cardInfo["syak_subtype"] = x.fields.syak_subtype.value;
+            cardInfo["syak_created"] = x.fields.syak_created.value;
+            cardInfo["syak_updated"] = x.fields.syak_updated.value;
+            ankiCardsInfo[cardInfo["syak_id"]] = cardInfo;
         });
         return ankiCardsInfo;
     }
@@ -218,18 +218,18 @@ export class SYAK {
         let siyuanCardsInfo = new Map<string, Map<string, string>>();
         siyuanCards.forEach(card => {
             let cardInfo = new Map<string, string>();
-            cardInfo.set("syak_front", card.fcontent ? card.fcontent : card.markdown);
-            cardInfo.set("syak_back", card.bcontent ? card.bcontent : card.markdown);
-            cardInfo.set("syak_id", card.id);
-            cardInfo.set("syak_parent_id", card.parent_id);
-            cardInfo.set("syak_root_id", card.root_id);
-            cardInfo.set("syak_box", card.box);
-            cardInfo.set("syak_deck", (this.ankiRootDeck + "/" + siyuanNBIdNameMap.get(card.box) + card.hpath).replace(/\//g, "::"));
-            cardInfo.set("syak_type", card.type);
-            cardInfo.set("syak_subtype", card.subtype);
-            cardInfo.set("syak_created", card.created);
-            cardInfo.set("syak_updated", card.updated);
-            siyuanCardsInfo.set(cardInfo.get("syak_id"), cardInfo);
+            cardInfo["syak_front"] = card.fcontent ? card.fcontent : card.markdown;
+            cardInfo["syak_back"] = card.bcontent ? card.bcontent : card.markdown;
+            cardInfo["syak_id"] = card.id;
+            cardInfo["syak_parent_id"] = card.parent_id;
+            cardInfo["syak_root_id"] = card.root_id;
+            cardInfo["syak_box"] = card.box;
+            cardInfo["syak_deck"] = (this.ankiRootDeck + "/" + siyuanNBIdNameMap.get(card.box) + card.hpath).replace(/\//g, "::");
+            cardInfo["syak_type"] = card.type;
+            cardInfo["syak_subtype"] = card.subtype;
+            cardInfo["syak_created"] = card.created;
+            cardInfo["syak_updated"] = card.updated;
+            siyuanCardsInfo[cardInfo["syak_id"]] = cardInfo;
         });
         return siyuanCardsInfo;
     }
@@ -238,7 +238,7 @@ export class SYAK {
     对比 ankiCardsInfo 和 siyuanCardsInfo
     找出需要创建、更新和删除的卡片
     */
-    async compareAnkiCardsInfo(ankiCardsInfo: Map<string, Map<string, string>>, siyuanCardsInfo: Map<string, Map<string, string>>): Promise<any> {
+    async compareCardsInfo(ankiCardsInfo: Map<string, Map<string, string>>, siyuanCardsInfo: Map<string, Map<string, string>>): Promise<any> {
         let cmpResult = {
             "create": [],
             "update": [],
@@ -253,12 +253,12 @@ export class SYAK {
         // to update
         siyuanCardsInfo.forEach((siyuanCard, key) => {
             if (ankiCardsInfo.has(key)) {
-                let ankiCard = ankiCardsInfo.get(key);
-                siyuanCard.set("syak_anki_id", ankiCard.get("syak_anki_id"));
+                let ankiCard = ankiCardsInfo[key];
+                siyuanCard["syak_anki_id"] = ankiCard["syak_anki_id"];
                 if (
-                    siyuanCard.get("syak_updated") > ankiCard.get("syak_updated") // 更新时间
-                    || siyuanCard.get("syak_deck") != ankiCard.get("syak_deck") // 集合名
-                    || siyuanCard.get("syak_hash") != ankiCard.get("syak_hash") // 哈希值
+                    siyuanCard["syak_updated"] > ankiCard["syak_updated"] // 更新时间
+                    || siyuanCard["syak_deck"] != ankiCard["syak_deck"] // 集合名
+                    || siyuanCard["syak_hash"] != ankiCard["syak_hash"] // 哈希值
                 ) {
                     cmpResult.update.push(siyuanCard);
                 }
@@ -280,13 +280,13 @@ export class SYAK {
     async createAnkiCards(createCards: Map<string, string>[]): Promise<void> {
         // markdown 转换为 html
         createCards.forEach(item => {
-            item["syak_front"] = this.lute.Md2HTML(item.get("syak_front"));
-            item["syak_back"] = this.lute.Md2HTML(item.get("syak_back"));
+            item["syak_front"] = this.lute.Md2HTML(item["syak_front"]);
+            item["syak_back"] = this.lute.Md2HTML(item["syak_back"]);
         });
         // 为每个笔记创建请求
         let createNoteParams = createCards.map(x => {
             return {
-                "deckName": x.get("syak_deck"),
+                "deckName": x["syak_deck"],
                 "modelName": this.ankiModel,
                 "fields": x,
                 "options": {
@@ -311,13 +311,13 @@ export class SYAK {
     async updateAnkiCards(updateCards: Map<string, string>[]): Promise<void> {
         // 为每个笔记添加front字段，存储转换为HTML的内容
         updateCards.forEach(item => {
-            item["syak_front"] = this.lute.Md2HTML(item.get("syak_front"));
-            item["syak_back"] = this.lute.Md2HTML(item.get("syak_back"));
+            item["syak_front"] = this.lute.Md2HTML(item["syak_front"]);
+            item["syak_back"] = this.lute.Md2HTML(item["syak_back"]);
         });
         // 为每个笔记创建请求
         let syakAnkiIds = [];
         updateCards.forEach(x => {
-            syakAnkiIds.push(x.get("syak_anki_id"));
+            syakAnkiIds.push(x["syak_anki_id"]);
             x.delete("syak_anki_id");
         });
         let updateNoteParams = updateCards.map(x => {
@@ -342,7 +342,7 @@ export class SYAK {
     */
     async deleteAnkiCards(deleteCards: Map<string, string>[]): Promise<void> {
         // 创建请求
-        this.actionsParams.set("deleteNotes", { "action": "deleteNotes", "version": 6, "params": { "notes": deleteCards.map(x => x.get("syak_anki_id")) } });
+        this.actionsParams.set("deleteNotes", { "action": "deleteNotes", "version": 6, "params": { "notes": deleteCards.map(x => x["syak_anki_id"]) } });
         console.log(this.actionsParams);
     }
 
@@ -354,32 +354,32 @@ export class SYAK {
             "create": [],
             "delete": [],
         };
-        let usedDecks = new Set<string>();
+        let siyuanDecks = new Set<string>();
         needCreate.forEach(x => {
-            usedDecks.add(x.get("syak_deck"));
+            siyuanDecks.add(x["syak_deck"]);
         });
         needUpdate.forEach(x => {
-            usedDecks.add(x.get("syak_deck"));
+            siyuanDecks.add(x["syak_deck"]);
         });
-        ankiDecks.forEach(x => {
-            if (!usedDecks.has(x)) {
-                deckResult.delete.push(x);
-            }
-        });
-        usedDecks.forEach(x => {
+        // 统计需要新增的deck
+        siyuanDecks.forEach(x => {
             if (!ankiDecks.includes(x)) {
                 deckResult.create.push(x);
             }
         });
-
+        // 统计需要删除的deck
+        ankiDecks.forEach(x => {
+            // 检查 anki deck 不是思源 deck 中且不是任何思源 deck 的前缀
+            if (!siyuanDecks.has(x) && ![...siyuanDecks].some(deck => deck.includes(x))) {
+                deckResult.delete.push(x);
+            }
+        });
         // 创建deck
         this.actionsParams.set("createDecks", { "action": "multi", "version": 6, "params": { "actions": deckResult.create.map(x => ({ "action": "createDeck", "version": 6, "params": { "deck": x } })) } });
-
         // 更新deck
-        this.actionsParams.set("changeDecks", { "action": "multi", "version": 6, "params": { "actions": needUpdate.map(x => ({ "action": "changeDeck", "version": 6, "params": { "cards": [x.get("syak_anki_id")], "deck": x.get("syak_deck") } })) } });
-
+        this.actionsParams.set("changeDecks", { "action": "multi", "version": 6, "params": { "actions": needUpdate.map(x => ({ "action": "changeDeck", "version": 6, "params": { "cards": [x["syak_anki_id"]], "deck": x["syak_deck"] } })) } });
         // 删除deck
-        this.actionsParams.set("deleteDecks", { "action": "deleteDecks", "version": 6, "params": { "decks": deckResult.delete } });
+        this.actionsParams.set("deleteDecks", { "action": "deleteDecks", "version": 6, "params": { "decks": deckResult.delete, "cardsToo": true } });
 
         return deckResult;
     }
@@ -410,7 +410,7 @@ export class SYAK {
         const siyuanCardsInfo = await this.getSiyuanCardsInfo(siyuanCards, siyuanNBIdNameMap);
         // 对比 ankiCardsInfo 和 siyuanCardsInfo
         // 找出需要创建、更新和删除的卡片
-        const cmpResult = await this.compareAnkiCardsInfo(ankiCardsInfo, siyuanCardsInfo);
+        const cmpResult = await this.compareCardsInfo(ankiCardsInfo, siyuanCardsInfo);
         this.createAnkiCards(cmpResult.create);
         this.updateAnkiCards(cmpResult.update);
         this.deleteAnkiCards(cmpResult.delete);
@@ -432,26 +432,10 @@ export class SYAK {
         }
         // test create card
         let testCreateCardResp = await this.request_anki({
-            "action": "addNote",
+            "action": "addNotes",
             "version": 6,
             "params": {
-                "note": {
-                    "deckName": "test1",
-                    "modelName": this.ankiModel,
-                    "fields": {
-                        "syak_front": "test",
-                        "syak_back": "test",
-                    },
-                    "options": {
-                        "allowDuplicate": false,
-                        "duplicateScope": "deck",
-                        "duplicateScopeOptions": {
-                            "deckName": "Default",
-                            "checkChildren": false,
-                            "checkAllModels": false
-                        }
-                    },
-                }
+                "notes": [this.actionsParams.get("addNotes").params.notes[0]]
             }
         });
         if (testCreateCardResp.status != 200) {
