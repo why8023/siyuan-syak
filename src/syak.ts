@@ -16,8 +16,8 @@ export class SYAK {
 
     // 思源模型字段
     modelFields: string[] = [
-        "Front",  // 正面
-        "Back",   // 背面
+        "syak_front",  // 正面
+        "syak_back",   // 背面
         "syak_id",  // 卡片ID
         "syak_parent_id",  // 父块ID
         "syak_root_id",  // 根块ID
@@ -66,8 +66,8 @@ export class SYAK {
     async checkAnkiModel(): Promise<string[]> {
         // card template
         let cardTemplate = {
-            "Front": "{{Front}}",  // 正面模板
-            "Back": "{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}",  // 背面模板
+            "Front": "{{syak_front}}",  // 正面模板
+            "Back": "{{FrontSide}}\n\n<hr id=answer>\n\n{{syak_back}}",  // 背面模板
         }
         // 获取 Anki 现有模型
         let resp = await this.request_anki({
@@ -132,8 +132,8 @@ export class SYAK {
         // 提取笔记信息到列表
         ankiCards.forEach(x => {
             let cardInfo = new Map<string, string>();
-            cardInfo.set("Front", x.fields.Front);
-            cardInfo.set("Back", x.fields.Back);
+            cardInfo.set("syak_front", x.fields.syak_front);
+            cardInfo.set("syak_back", x.fields.syak_back);
             cardInfo.set("syak_anki_id", x.NoteId);
             cardInfo.set("syak_id", x.fields.id);
             cardInfo.set("syak_parent_id", x.fields.parent_id);
@@ -218,8 +218,8 @@ export class SYAK {
         let siyuanCardsInfo = new Map<string, Map<string, string>>();
         siyuanCards.forEach(card => {
             let cardInfo = new Map<string, string>();
-            cardInfo.set("Front", card.fcontent ? card.fcontent : card.markdown);
-            cardInfo.set("Back", card.bcontent ? card.bcontent : card.markdown);
+            cardInfo.set("syak_front", card.fcontent ? card.fcontent : card.markdown);
+            cardInfo.set("syak_back", card.bcontent ? card.bcontent : card.markdown);
             cardInfo.set("syak_id", card.id);
             cardInfo.set("syak_parent_id", card.parent_id);
             cardInfo.set("syak_root_id", card.root_id);
@@ -280,8 +280,8 @@ export class SYAK {
     async createAnkiCards(createCards: Map<string, string>[]): Promise<void> {
         // markdown 转换为 html
         createCards.forEach(item => {
-            item["Front"] = this.lute.Md2HTML(item.get("Front"));
-            item["Back"] = this.lute.Md2HTML(item.get("Back"));
+            item["syak_front"] = this.lute.Md2HTML(item.get("syak_front"));
+            item["syak_back"] = this.lute.Md2HTML(item.get("syak_back"));
         });
         // 为每个笔记创建请求
         let createNoteParams = createCards.map(x => {
@@ -289,6 +289,15 @@ export class SYAK {
                 "deckName": x.get("syak_deck"),
                 "modelName": this.ankiModel,
                 "fields": x,
+                "options": {
+                    "allowDuplicate": false,
+                    "duplicateScope": "deck",
+                    "duplicateScopeOptions": {
+                        "deckName": "Default",
+                        "checkChildren": false,
+                        "checkAllModels": false
+                    }
+                },
             };
         });
         // 创建请求
@@ -302,8 +311,8 @@ export class SYAK {
     async updateAnkiCards(updateCards: Map<string, string>[]): Promise<void> {
         // 为每个笔记添加front字段，存储转换为HTML的内容
         updateCards.forEach(item => {
-            item["Front"] = this.lute.Md2HTML(item.get("Front"));
-            item["Back"] = this.lute.Md2HTML(item.get("Back"));
+            item["syak_front"] = this.lute.Md2HTML(item.get("syak_front"));
+            item["syak_back"] = this.lute.Md2HTML(item.get("syak_back"));
         });
         // 为每个笔记创建请求
         let syakAnkiIds = [];
@@ -430,8 +439,8 @@ export class SYAK {
                     "deckName": "test1",
                     "modelName": this.ankiModel,
                     "fields": {
-                        "Front": "test",
-                        "Back": "test",
+                        "syak_front": "test",
+                        "syak_back": "test",
                     },
                     "options": {
                         "allowDuplicate": false,
@@ -455,6 +464,10 @@ export class SYAK {
             console.error("addNotesResp: ", addNotesResp.data);
             return;
         }
+        let addNoteResult = addNotesResp.data.result;
+        cmpResult.create.forEach(x => {
+            x.set("syak_anki_id", addNoteResult.shift());
+        });
         // 更新卡片
         let updateNoteFieldsResp = await this.request_anki(this.actionsParams.get("updateNoteFields"));
         if (updateNoteFieldsResp.status != 200) {
