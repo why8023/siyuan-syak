@@ -53,7 +53,7 @@ export default class PluginSample extends Plugin {
      */
     async onload() {
         // 初始化SYAK
-        this.syak = new SYAK("", 680, 8765, "siyuan");
+        this.syak = new SYAK("", 680, 8765, "siyuan", "siyuan");
         // 初始化插件数据
         this.data[STORAGE_NAME] = { readonlyText: "Readonly" };
         console.log("loading plugin-sample", this.i18n);
