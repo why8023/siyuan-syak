@@ -243,6 +243,26 @@ export class SYAK {
         tunedMd = tunedMd.replace(siyuanLinkRegex, (match, link, url, title) => {
             return match.replace(link, `[${title}](siyuan://blocks/${url}?focus=1)`);
         });
+
+        // 处理数学公式
+        // 例如: '1. 列表公式\n\n    $$\n    1+2+\\alpha = y\n    $$'
+        // 需要转换为: '1. 列表公式\n\n$$\n1+2+\\alpha = y\n$$', 去掉$$前后多余的空白符
+        const blockEqRegex = /[ \t]*\$\$[ \t]*([\s\S]*?)[ \t]*\$\$[ \t]*/g;
+        tunedMd = tunedMd.replace(blockEqRegex, (match, equation) => {
+            // 去除公式前后多余的空白符（不包括换行）
+            const trimmedEq = equation.replace(/^[ \t]+|[ \t]+$/gm, '');
+            return `$$${trimmedEq}$$`;
+        });
+        
+        // 处理内联公式
+        // 例如: '这是一个内联公式 $    a^2 + b^2 = c^2 $ 在文本中'
+        // 需要转换为: '这是一个内联公式 $a^2 + b^2 = c^2$ 在文本中'
+        const inlineEqRegex = /[ \t]*\$[ \t]*([^\$]+)[ \t]*\$[ \t]*/g;
+        tunedMd = tunedMd.replace(inlineEqRegex, (match, equation) => {
+            // 去除公式内部多余的空白符（不包括换行）
+            const trimmedEq = equation.replace(/^[ \t]+|[ \t]+$/gm, '');
+            return `$${trimmedEq}$`;
+        });
         return this.marked.parse(tunedMd);
     }
 
@@ -287,6 +307,8 @@ export class SYAK {
             this.modelFields.forEach(field => {
                 if (field === "syak_front") {
                     card[field] = this.handleSiyuanMarkdown(card.get(field));
+                    // 添加思源链接到卡片正面
+                    card[field] += '<p><a href="siyuan://blocks/' + card.get("syak_id") + '?focus=1">SiYuanURL</a></p>';
                 } else if (field === "syak_back") {
                     card[field] = this.handleSiyuanMarkdown(card.get(field));
                 } else {
