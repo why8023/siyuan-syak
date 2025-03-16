@@ -9,29 +9,7 @@
 
 import { Plugin, Setting } from 'siyuan';
 
-// 设置项类型
-export type TSettingItemType = 'string' | 'number' | 'boolean' | 'select' | 'textarea' | 'slider';
 
-// 设置项接口
-export interface ISettingItem {
-    key: string;
-    value: any;
-    type: TSettingItemType;
-    title: string;
-    description?: string;
-    options?: Record<string, string>;
-    placeholder?: string;
-    min?: number;
-    max?: number;
-    step?: number;
-}
-
-// 设置工具类参数
-export interface ISettingUtilsOptions {
-    plugin: Plugin;
-    name?: string;
-    callback?: (data: any) => void;
-    width?: string;
 /**
  * The default function to get the value of the element
  * @param type 
@@ -89,7 +67,7 @@ const createDefaultSetter = (type: TSettingItemType) => {
             };
             break;
         default:
-            setter = () => { };
+            setter = () => {};
             break;
     }
     return setter;
