@@ -1,19 +1,18 @@
 import { request, lsNotebooks, sql } from "@/api";
+import { marked } from "marked";
 import axios from "axios";
 
 export class SYAK {
-
     // 思源配置
-    siyuanPath: string;
+    siyuanHost: string;
     siyuanPort: number;
-
-    // Anki配置
+    siyuanApiUrl: string;
+    // anki配置
+    ankiHost: string;
     ankiPort: number;
-    ankiUrl: string;
+    ankiApiUrl: string;
     ankiModel: string;
     ankiRootDeck: string;
-
-
     // 思源模型字段
     modelFields: string[] = [
         "syak_front",  // 正面
@@ -28,37 +27,31 @@ export class SYAK {
         "syak_created",  // 创建时间
         "syak_updated",  // 更新时间
     ]
-
-    // Anki模型配置
-    ankiModelConfig: any;
-
-    // 正则表达式
-    mediaRegex: RegExp = /(?<=\(assets\/)[\w-]*\d{14}-\S{7}\.[\w]+(?=\))/;
-
     // 解析器
     lute: any;
-
     // 存储要执行的 anki action 和 params
     actionsParams: Map<string, any> = new Map();
-
     // 同步摘要信息
     public summary: string[] = [];
 
-    constructor(siyuanPath: string, siyuanPort: number, ankiPort: number, ankiModel: string, ankiRootDeck: string) {
-        this.siyuanPath = siyuanPath;
+    constructor(siyuanHost: string = "localhost", siyuanPort: number = 6806, ankiHost: string = "localhost", ankiPort: number = 8765, ankiModel: string = "siyuan", ankiRootDeck: string = "siyuan") {
+        // 思源配置
+        this.siyuanHost = siyuanHost;
         this.siyuanPort = siyuanPort;
+        this.siyuanApiUrl = `http://${this.siyuanHost}:${this.siyuanPort}`;
+        // anki配置
+        this.ankiHost = ankiHost;
         this.ankiPort = ankiPort;
+        this.ankiApiUrl = `http://${this.ankiHost}:${this.ankiPort}`;
         this.ankiModel = ankiModel;
         this.ankiRootDeck = ankiRootDeck;
         // 初始化解析器
         this.lute = window.Lute.New();
-
-        this.ankiUrl = `http://localhost:${this.ankiPort}`;
     }
 
     // 封装 anki request 请求
     async request_anki(params: any) {
-        const resp = await axios.post(this.ankiUrl, params);
+        const resp = await axios.post(this.ankiApiUrl, params);
         return resp;
     }
 
@@ -150,37 +143,6 @@ export class SYAK {
     }
 
     /*
-    media from blocks
-    */
-    async mediaFromBlocks(blocks: any[]): Promise<void> {
-        // 提取媒体文件
-        let mediaRegex = /(?<=\(assets\/)[\w-]*\d{14}-\S{7}\.[\w]+(?=\))/;
-        let currentMedia = blocks.map(x => x.markdown).join("\n");
-        let currentMediaList = currentMedia.match(mediaRegex);
-        console.log(currentMediaList);
-
-        let parentMedia = blocks.map(x => x.parent_markdown).join("\n");
-        let parentMediaList = parentMedia.match(mediaRegex);
-        console.log(parentMediaList);
-
-        // 合并媒体文件
-        let mediaList = [...currentMediaList, ...parentMediaList];
-        console.log(mediaList);
-
-        // 创建 media 请求
-        let mediaParams = mediaList.map(x => {
-            return {
-                "action": "storeMediaFile",
-                "version": 6,
-                "params": { "filename": x, "path": `${this.siyuanPath}/data/assets/${x}` },
-            };
-        });
-        // 使用 multi 操作批量执行
-        this.actionsParams.set("storeMediaFile", { "action": "multi", "version": 6, "params": { "actions": mediaParams } });
-        console.log(this.actionsParams);
-    }
-
-    /*
     向思源发送同步完成通知
     */
     async sendFinishNotification(msg: string = ""): Promise<void> {
@@ -233,6 +195,35 @@ export class SYAK {
         });
         return siyuanCardsInfo;
     }
+    /*
+    处理front和back的markdown转换为HTML
+    */
+    handleSiyuanMarkdown(md: string): string {
+        // 处理资源文件
+        // 例如: 
+        // 如果内容是: 包含图片的段落卡![image](assets/image-20250315125431-bs9xpl6.png)
+        // 需要转换为: 包含图片的段落卡![image](https://127.0.0.1:6806/assets/image-20250315125431-bs9xpl6.png) 
+        // 不仅仅局限于图片, 还包括视频, 音频, 等资源文件
+        // 处理资源文件路径
+        // 匹配所有的资源文件链接，包括图片、视频、音频等
+        const assetRegex = /\((assets\/[\w-]*\d{14}-\S{7}\.[\w]+)\)/g;
+
+        // 替换所有匹配到的资源文件链接
+        let tunedMd = md.replace(assetRegex, (match, assetPath) => {
+            // 将相对路径转换为完整的思源API URL
+            return match.replace(assetPath, this.siyuanApiUrl + assetPath);
+        });
+
+        // 处理siyuan link
+        // 例如: "* 无序列表卡\n\n  * 无序列表背面\n  * ((20240316170331-169pbdl 'data'))"
+        // 需要转换为: "* 无序列表卡\n\n  * 无序列表背面\n  * [data](siyuan://blocks/20240316170331-169pbdl?focus=1)"
+        const siyuanLinkRegex = /\(\((\d{14}-\S{7})\s['"](\w+)['"]\)\)/g;
+        tunedMd = tunedMd.replace(siyuanLinkRegex, (match, link, title) => {
+            return match.replace(link, `[${title}](siyuan://blocks/${link}?focus=1)`);
+        });
+
+        return this.lute.Md2HTML(tunedMd);
+    }
 
     /*
     对比 ankiCardsInfo 和 siyuanCardsInfo
@@ -270,6 +261,18 @@ export class SYAK {
                 cmpResult.delete.push(ankiCard);
             }
         });
+        // 更新create和update的字段
+        for (let card of [...cmpResult.create, ...cmpResult.update]) {
+            this.modelFields.forEach(field => {
+                if (field === "syak_front") {
+                    card[field] = this.handleSiyuanMarkdown(card.get(field));
+                } else if (field === "syak_back") {
+                    card[field] = this.handleSiyuanMarkdown(card.get(field));
+                } else {
+                    card[field] = card.get(field);
+                }
+            });
+        }
 
         return cmpResult;
     }
@@ -278,20 +281,6 @@ export class SYAK {
     create anki cards
     */
     async createAnkiCards(createCards: Map<string, string>[]): Promise<void> {
-        // markdown 转换为 html
-        createCards.forEach(item => {
-            item["syak_front"] = this.lute.Md2HTML(item.get("syak_front"));
-            item["syak_back"] = this.lute.Md2HTML(item.get("syak_back"));
-            item["syak_id"] = item.get("syak_id");
-            item["syak_parent_id"] = item.get("syak_parent_id");
-            item["syak_root_id"] = item.get("syak_root_id");
-            item["syak_box"] = item.get("syak_box");
-            item["syak_deck"] = item.get("syak_deck");
-            item["syak_type"] = item.get("syak_type");
-            item["syak_subtype"] = item.get("syak_subtype");
-            item["syak_created"] = item.get("syak_created");
-            item["syak_updated"] = item.get("syak_updated");
-        });
         // 为每个笔记创建请求
         let createNoteParams = createCards.map(x => {
             return {
@@ -318,20 +307,6 @@ export class SYAK {
     update anki cards
     */
     async updateAnkiCards(updateCards: Map<string, string>[]): Promise<void> {
-        // 为每个笔记添加front字段，存储转换为HTML的内容
-        updateCards.forEach(item => {
-            item["syak_front"] = this.lute.Md2HTML(item.get("syak_front"));
-            item["syak_back"] = this.lute.Md2HTML(item.get("syak_back"));
-            item["syak_id"] = item.get("syak_id");
-            item["syak_parent_id"] = item.get("syak_parent_id");
-            item["syak_root_id"] = item.get("syak_root_id");
-            item["syak_box"] = item.get("syak_box");
-            item["syak_deck"] = item.get("syak_deck");
-            item["syak_type"] = item.get("syak_type");
-            item["syak_subtype"] = item.get("syak_subtype");
-            item["syak_created"] = item.get("syak_created");
-            item["syak_updated"] = item.get("syak_updated");
-        });
         // 为每个笔记创建请求
         let updateNoteParams = updateCards.map(x => {
             return {
@@ -360,13 +335,10 @@ export class SYAK {
     }
 
     /*
-    统计需要新增\删除的deck
+    统计需要新增\更新的deck
     */
     async getDecksInfo(ankiDecks: string[], needCreate: Map<string, string>[], needUpdate: Map<string, string>[]): Promise<any> {
-        let deckResult = {
-            "create": [],
-            "delete": [],
-        };
+        let createDecks = [];
         let siyuanDecks = new Set<string>();
         needCreate.forEach(x => {
             siyuanDecks.add(x.get("syak_deck"));
@@ -377,26 +349,60 @@ export class SYAK {
         // 统计需要新增的deck
         siyuanDecks.forEach(x => {
             if (!ankiDecks.includes(x)) {
-                deckResult.create.push(x);
-            }
-        });
-        // 统计需要删除的deck
-        ankiDecks.forEach(x => {
-            // 检查 anki deck 不是思源 deck 中且不是任何思源 deck 的前缀
-            if (!siyuanDecks.has(x) && ![...siyuanDecks].some(deck => deck.includes(x))) {
-                deckResult.delete.push(x);
+                createDecks.push(x);
             }
         });
         // 创建deck
-        this.actionsParams.set("createDecks", { "action": "multi", "version": 6, "params": { "actions": deckResult.create.map(x => ({ "action": "createDeck", "version": 6, "params": { "deck": x } })) } });
+        this.actionsParams.set("createDecks", { "action": "multi", "version": 6, "params": { "actions": createDecks.map(x => ({ "action": "createDeck", "version": 6, "params": { "deck": x } })) } });
         // 更新deck
         this.actionsParams.set("changeDecks", { "action": "multi", "version": 6, "params": { "actions": needUpdate.map(x => ({ "action": "changeDeck", "version": 6, "params": { "cards": [x.get("syak_anki_id")], "deck": x.get("syak_deck") } })) } });
-        // 删除deck
-        this.actionsParams.set("deleteDecks", { "action": "deleteDecks", "version": 6, "params": { "decks": deckResult.delete, "cardsToo": true } });
-
-        return deckResult;
+        return createDecks;
     }
 
+    /*
+    查找无效的deck
+    */
+    async findInvalidDecks(): Promise<void> {
+        // 获取anki deck 列表
+        let deckNamesResp = await this.request_anki({
+            "action": "deckNames",
+            "version": 6,
+        });
+        let ankiDecks = deckNamesResp.data.result;
+        // 获取需要删除deck的cards计数
+        let getDeckStatsResp = await this.request_anki({
+            "action": "getDeckStats",
+            "version": 6,
+            "params": { "decks": ankiDecks },
+        });
+        if (getDeckStatsResp.status != 200) {
+            console.error("getDeckStatsResp: ", getDeckStatsResp.data);
+            return;
+        }
+        // 获取需要删除deck的cards计数
+        let deckStats = getDeckStatsResp.data.result;
+        let deleteDeckCardsCount = new Map<string, number>();
+        Object.entries(deckStats).forEach(([key, value]) => {
+            const typedValue = value as { name: string, total_in_deck: number };
+            deleteDeckCardsCount.set(typedValue.name, typedValue.total_in_deck);
+        });
+        // 计数大于0的deck
+        let validDecks = ankiDecks.filter(x => {
+            const parts = x.split("::");
+            return deleteDeckCardsCount.get(parts[parts.length - 1]) > 0;
+        });
+        // 计数等于0的deck
+        let invalidDecks = ankiDecks.filter(x => {
+            return !validDecks.includes(x);
+        });
+        // 统计需要删除的deck, 检查 invalidDecks 不是 validDecks 的前缀
+        let deleteDecks = invalidDecks.filter(x => {
+            return !validDecks.some(deck => deck.startsWith(x));
+        });
+        // 删除无效的deck
+        this.actionsParams.set("deleteDecks", { "action": "deleteDecks", "version": 6, "params": { "decks": deleteDecks, "cardsToo": true } });
+        console.log(this.actionsParams);
+    }
 
     async run(): Promise<void> {
         // 检查 Anki 模型
@@ -427,13 +433,15 @@ export class SYAK {
         this.createAnkiCards(cmpResult.create);
         this.updateAnkiCards(cmpResult.update);
         this.deleteAnkiCards(cmpResult.delete);
-        // 统计需要新增\删除的deck
+        // 统计需要新增\更新的deck
         const deckNamesResp = await this.request_anki({
             "action": "deckNames",
             "version": 6,
         });
         const ankiDecks = deckNamesResp.data.result;
-        const decksInfo = await this.getDecksInfo(ankiDecks, cmpResult.create, cmpResult.update);
+        const createDecks = await this.getDecksInfo(ankiDecks, cmpResult.create, cmpResult.update);
+        // 查找无效的deck
+        await this.findInvalidDecks();
         // todo: 处理媒体文件
 
         // 按顺序执行请求
@@ -493,6 +501,6 @@ export class SYAK {
         // TODO: 实现删除未使用牌组的逻辑
 
         // 发送完成通知
-        await this.sendFinishNotification(this.summary.join("\n"));
+        // await this.sendFinishNotification(this.summary.join("\n"));
     }
 }

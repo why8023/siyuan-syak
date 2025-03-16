@@ -53,7 +53,7 @@ export default class PluginSample extends Plugin {
      */
     async onload() {
         // 初始化SYAK
-        this.syak = new SYAK("", 680, 8765, "siyuan", "siyuan");
+        this.syak = new SYAK("localhost", 6806, "localhost", 8765, "siyuan", "siyuan");
         // 初始化插件数据
         this.data[STORAGE_NAME] = { readonlyText: "Readonly" };
         console.log("loading plugin-sample", this.i18n);
@@ -61,7 +61,7 @@ export default class PluginSample extends Plugin {
         // 检测当前前端环境
         const frontEnd = getFrontend();
         this.isMobile = frontEnd === "mobile" || frontEnd === "browser-mobile";
-        
+
         // 添加自定义图标，SVG格式
         this.addIcons(`<symbol id="iconFace" viewBox="0 0 32 32">
 <path d="M13.667 17.333c0 0.92-0.747 1.667-1.667 1.667s-1.667-0.747-1.667-1.667 0.747-1.667 1.667-1.667 1.667 0.747 1.667 1.667zM20 15.667c-0.92 0-1.667 0.747-1.667 1.667s0.747 1.667 1.667 1.667 1.667-0.747 1.667-1.667-0.747-1.667-1.667-1.667zM29.333 16c0 7.36-5.973 13.333-13.333 13.333s-13.333-5.973-13.333-13.333 5.973-13.333 13.333-13.333 13.333 5.973 13.333 13.333zM14.213 5.493c1.867 3.093 5.253 5.173 9.12 5.173 0.613 0 1.213-0.067 1.787-0.16-1.867-3.093-5.253-5.173-9.12-5.173-0.613 0-1.213 0.067-1.787 0.16zM5.893 12.627c2.28-1.293 4.040-3.4 4.88-5.92-2.28 1.293-4.040 3.4-4.88 5.92zM26.667 16c0-1.040-0.16-2.040-0.44-2.987-0.933 0.2-1.893 0.32-2.893 0.32-4.173 0-7.893-1.92-10.347-4.92-1.4 3.413-4.187 6.093-7.653 7.4 0.013 0.053 0 0.12 0 0.187 0 5.88 4.787 10.667 10.667 10.667s10.667-4.787 10.667-10.667z"></path>
@@ -101,7 +101,7 @@ export default class PluginSample extends Plugin {
         statusIcon.addEventListener("click", () => {
             showMessage(`[${this.name}]: ${this.i18n.removedData}`);
         });
-        
+
         this.addStatusBar({
             element: statusIcon
         });
@@ -123,7 +123,7 @@ export default class PluginSample extends Plugin {
                 console.log(element, "dockCallback");
             },
         });
-        
+
         // 添加命令 - 获取打开的标签页
         this.addCommand({
             langKey: "getTab",
@@ -188,7 +188,7 @@ export default class PluginSample extends Plugin {
         this.settingUtils = new SettingUtils({
             plugin: this, name: STORAGE_NAME
         });
-        
+
         // 添加文本输入设置项
         this.settingUtils.addItem({
             key: "Input",
@@ -205,7 +205,7 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
-        
+
         // 添加文本区域设置项
         this.settingUtils.addItem({
             key: "InputArea",
@@ -222,7 +222,7 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
-        
+
         // 添加复选框设置项
         this.settingUtils.addItem({
             key: "Check",
@@ -239,7 +239,7 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
-        
+
         // 添加下拉选择设置项
         this.settingUtils.addItem({
             key: "Select",
@@ -259,7 +259,7 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
-        
+
         // 添加滑块设置项
         this.settingUtils.addItem({
             key: "Slider",
@@ -273,7 +273,7 @@ export default class PluginSample extends Plugin {
                 max: 100,
                 step: 1,
             },
-            action:{
+            action: {
                 callback: () => {
                     // 实时读取数据
                     let value = this.settingUtils.take("Slider");
@@ -281,7 +281,7 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
-        
+
         // 添加按钮设置项
         this.settingUtils.addItem({
             key: "Btn",
@@ -296,7 +296,7 @@ export default class PluginSample extends Plugin {
                 }
             }
         });
-        
+
         // 添加自定义元素设置项
         this.settingUtils.addItem({
             key: "Custom Element",
@@ -320,7 +320,7 @@ export default class PluginSample extends Plugin {
                 ele.textContent = val;
             }
         });
-        
+
         // 添加提示信息设置项
         this.settingUtils.addItem({
             key: "Hint",
@@ -551,7 +551,7 @@ export default class PluginSample extends Plugin {
         const menu = new Menu("topBarSample", () => {
             console.log(this.i18n.byeMenu);
         });
-        
+
         // 添加对话框菜单项
         menu.addItem({
             icon: "iconInfo",
@@ -561,7 +561,7 @@ export default class PluginSample extends Plugin {
                 this.syak.run();
             }
         });
-        
+
         // 非移动端特有菜单项
         if (!this.isMobile) {
             // 添加自定义标签页菜单项
@@ -583,7 +583,7 @@ export default class PluginSample extends Plugin {
                     console.log(tab);
                 }
             });
-            
+
         } else {
             // 移动端特有菜单项
             menu.addItem({
@@ -594,7 +594,7 @@ export default class PluginSample extends Plugin {
                 }
             });
         }
-        
+
         menu.addSeparator();
         menu.addItem({
             icon: "iconSettings",
