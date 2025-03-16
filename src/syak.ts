@@ -1,5 +1,8 @@
 import { request, lsNotebooks, sql } from "@/api";
-import { marked } from "marked";
+import { Marked } from "marked";
+import { markedHighlight } from "marked-highlight";
+import hljs from 'highlight.js';
+import markedKatex from "marked-katex-extension";
 import axios from "axios";
 
 export class SYAK {
@@ -29,6 +32,7 @@ export class SYAK {
     ]
     // 解析器
     lute: any;
+    marked: any;
     // 存储要执行的 anki action 和 params
     actionsParams: Map<string, any> = new Map();
     // 同步摘要信息
@@ -47,6 +51,19 @@ export class SYAK {
         this.ankiRootDeck = ankiRootDeck;
         // 初始化解析器
         this.lute = window.Lute.New();
+        this.marked = new Marked();
+        // this.marked.use(markedHighlight({
+        //     emptyLangClass: 'hljs',
+        //     langPrefix: 'hljs language-',
+        //     highlight(code, lang, info) {
+        //         const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+        //         return hljs.highlight(code, { language }).value;
+        //     }
+        // }))
+        const options = {
+            nonStandard: true
+        };
+        this.marked.use(markedKatex(options));
     }
 
     // 封装 anki request 请求
@@ -211,18 +228,18 @@ export class SYAK {
         // 替换所有匹配到的资源文件链接
         let tunedMd = md.replace(assetRegex, (match, assetPath) => {
             // 将相对路径转换为完整的思源API URL
-            return match.replace(assetPath, this.siyuanApiUrl + assetPath);
+            return match.replace(assetPath, this.siyuanApiUrl + "/" + assetPath);
         });
 
         // 处理siyuan link
         // 例如: "* 无序列表卡\n\n  * 无序列表背面\n  * ((20240316170331-169pbdl 'data'))"
         // 需要转换为: "* 无序列表卡\n\n  * 无序列表背面\n  * [data](siyuan://blocks/20240316170331-169pbdl?focus=1)"
-        const siyuanLinkRegex = /\(\((\d{14}-\S{7})\s['"](\w+)['"]\)\)/g;
-        tunedMd = tunedMd.replace(siyuanLinkRegex, (match, link, title) => {
-            return match.replace(link, `[${title}](siyuan://blocks/${link}?focus=1)`);
+        const siyuanLinkRegex = /(\(\((\d{14}-\S{7})\s['"](\w+)['"]\)\))/g;
+        tunedMd = tunedMd.replace(siyuanLinkRegex, (match, link, url, title) => {
+            return match.replace(link, `[${title}](siyuan://blocks/${url}?focus=1)`);
         });
 
-        return this.lute.Md2HTML(tunedMd);
+        return this.markdownit.render(tunedMd);
     }
 
     /*
