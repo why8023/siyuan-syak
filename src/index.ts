@@ -41,13 +41,11 @@ const DOCK_TYPE = "dock_tab";          // 自定义停靠栏类型
  * 插件示例类，继承自Plugin基类
  */
 export default class PluginSample extends Plugin {
-
     customTab: () => IModel;                   // 自定义标签页函数
     private isMobile: boolean;                 // 是否为移动端
     private blockIconEventBindThis = this.blockIconEvent.bind(this);  // 绑定this的块图标事件处理函数
     private settingUtils: SettingUtils;        // 设置工具实例
     private syak: SYAK;                        // 思源插件实例
-
     /**
      * 插件加载时执行的方法
      */
@@ -93,6 +91,15 @@ export default class PluginSample extends Plugin {
             hotkey: "⇧⌘M",
             globalCallback: () => {
                 console.log(this.getOpenedTab());
+            },
+        });
+        // 添加命令 - 手动触发同步事件
+        this.addCommand({
+            langKey: "syncCards",
+            hotkey: "⇧⌘S",
+            globalCallback: async () => {
+                console.log("手动触发同步事件");
+                (this.eventBus as any).emit("sync");
             },
         });
         // 初始化设置工具
@@ -171,7 +178,11 @@ export default class PluginSample extends Plugin {
                 console.log("destroy tab:", TAB_TYPE);
             }
         });
-        this.eventBus.on("paste", this.eventBusLog);
+        // 监听粘贴事件
+        (this.eventBus as any).on("paste", async () => {
+            console.log("接收到同步事件，启动 SYAK.run()");
+            await this.syak.run();
+        });
     }
 
     /**
@@ -208,7 +219,7 @@ export default class PluginSample extends Plugin {
         });
         return options;
     }
-    
+
     /**
      * 事件总线粘贴事件处理函数
      * @param event 事件对象
