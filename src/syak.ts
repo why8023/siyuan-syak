@@ -4,6 +4,7 @@ import { markedHighlight } from "marked-highlight";
 import hljs from 'highlight.js';
 import markedKatex from "marked-katex-extension";
 import axios from "axios";
+import MarkdownIt from 'markdown-it';
 
 export class SYAK {
     // 思源配置
@@ -33,6 +34,7 @@ export class SYAK {
     // 解析器
     lute: any;
     marked: any;
+    markdownit: any;
     // 存储要执行的 anki action 和 params
     actionsParams: Map<string, any> = new Map();
     // 同步摘要信息
@@ -51,19 +53,22 @@ export class SYAK {
         this.ankiRootDeck = ankiRootDeck;
         // 初始化解析器
         this.lute = window.Lute.New();
+        // marked
         this.marked = new Marked();
-        // this.marked.use(markedHighlight({
-        //     emptyLangClass: 'hljs',
-        //     langPrefix: 'hljs language-',
-        //     highlight(code, lang, info) {
-        //         const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-        //         return hljs.highlight(code, { language }).value;
-        //     }
-        // }))
-        const options = {
+        this.marked.use(markedHighlight({
+            emptyLangClass: 'hljs',
+            langPrefix: 'hljs language-',
+            highlight(code, lang, info) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            }
+        }))
+        const markedKatexOptions = {
             nonStandard: true
         };
-        this.marked.use(markedKatex(options));
+        this.marked.use(markedKatex(markedKatexOptions));
+        // markdown-it
+        this.markdownit = new MarkdownIt();
     }
 
     // 封装 anki request 请求
@@ -238,8 +243,7 @@ export class SYAK {
         tunedMd = tunedMd.replace(siyuanLinkRegex, (match, link, url, title) => {
             return match.replace(link, `[${title}](siyuan://blocks/${url}?focus=1)`);
         });
-
-        return this.markdownit.render(tunedMd);
+        return this.marked.parse(tunedMd);
     }
 
     /*
@@ -457,9 +461,6 @@ export class SYAK {
         });
         const ankiDecks = deckNamesResp.data.result;
         const createDecks = await this.getDecksInfo(ankiDecks, cmpResult.create, cmpResult.update);
-        // 查找无效的deck
-        await this.findInvalidDecks();
-        // todo: 处理媒体文件
 
         // 按顺序执行请求
         // 创建deck
@@ -509,14 +510,13 @@ export class SYAK {
             return;
         }
         // 删除deck
+        // 查找无效的deck
+        await this.findInvalidDecks();
         let deleteDecksResp = await this.request_anki(this.actionsParams.get("deleteDecks"));
         if (deleteDecksResp.status != 200) {
             console.error("deleteDecksResp: ", deleteDecksResp.data);
             return;
         }
-        // 删除未使用的牌组
-        // TODO: 实现删除未使用牌组的逻辑
-
         // 发送完成通知
         // await this.sendFinishNotification(this.summary.join("\n"));
     }
