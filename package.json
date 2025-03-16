@@ -33,5 +33,17 @@
     "vite": "^5.2.9",
     "vite-plugin-static-copy": "^1.0.2",
     "vite-plugin-zip-pack": "^1.0.5"
+  },
+  "dependencies": {
+    "@elastic-code/markdow-it-katex": "^1.2.2",
+    "axios": "^1.8.3",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "markdown-it-katex": "^2.0.3",
+    "markdown-it-math": "5.0.0-rc.0",
+    "markdown-it-mathjax3": "^4.3.2",
+    "marked": "^15.0.7",
+    "marked-highlight": "^2.2.1",
+    "marked-katex-extension": "^5.1.4"
   }
 }
