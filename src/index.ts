@@ -46,6 +46,7 @@ export default class PluginSample extends Plugin {
     private blockIconEventBindThis = this.blockIconEvent.bind(this);  // 绑定this的块图标事件处理函数
     private settingUtils: SettingUtils;        // 设置工具实例
     private syak: SYAK;                        // 思源插件实例
+    private prevSyncTime: number = 0;          // 上一次同步时间
     /**
      * 插件加载时执行的方法
      */
@@ -178,10 +179,18 @@ export default class PluginSample extends Plugin {
                 console.log("destroy tab:", TAB_TYPE);
             }
         });
-        // 监听粘贴事件
-        (this.eventBus as any).on("paste", async () => {
-            console.log("接收到同步事件，启动 SYAK.run()");
-            await this.syak.run();
+        // 监听同步事件
+        (this.eventBus as any).on("sync-end", async () => {
+            if (this.prevSyncTime === 0) {
+                this.prevSyncTime = Date.now();
+            }
+            if (Date.now() - this.prevSyncTime > 5000) {
+                console.log("接收到同步事件，5秒后启动 SYAK.run()");
+                setTimeout(async () => {
+                    await this.syak.run();
+                    this.prevSyncTime = Date.now();
+                }, 5000);
+            }
         });
     }
 

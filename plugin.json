@@ -8,17 +8,10 @@
     "windows",
     "linux",
     "darwin",
-    "ios",
-    "android",
-    "harmony",
     "docker"
   ],
   "frontends": [
-    "desktop",
-    "mobile",
-    "browser-desktop",
-    "browser-mobile",
-    "desktop-window"
+    "desktop"
   ],
   "displayName": {
     "en_US": "SiYuan to Anki Sync",
