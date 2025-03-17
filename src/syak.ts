@@ -308,7 +308,16 @@ export class SYAK {
                 if (field === "syak_front") {
                     card[field] = this.handleSiyuanMarkdown(card.get(field));
                     // 添加思源链接到卡片正面
-                    card[field] += '<p><a href="siyuan://blocks/' + card.get("syak_id") + '?focus=1">SiYuanURL</a></p>';
+                    let siyuanUrl = 'siyuan://blocks/' + card.get("syak_id") + '?focus=1';
+                    let siyuanBrowserDesktopUrl = this.siyuanApiUrl + '/stage/build/desktop/?id=' + card.get("syak_id");
+                    let siyuanBrowserMobileUrl = this.siyuanApiUrl + '/stage/build/mobile/?id=' + card.get("syak_id");
+                    let siyuanRedirectUrl = this.siyuanApiUrl + '/widgets/url-scheme/?location=' + encodeURIComponent(siyuanUrl);
+                    card[field] += `<p style="display:flex;justify-content:space-between;font-size:0.6em;">
+                        <a href="${siyuanUrl}" style="float:left">SiYuanDesktop</a>
+                        <a href="${siyuanBrowserDesktopUrl}" style="float:left">SiYuanBrowserDesktop</a>
+                        <a href="${siyuanBrowserMobileUrl}" style="float:right">SiYuanMobile</a>
+                        <a href="${siyuanRedirectUrl}" style="float:right">SiYuanRedirect</a>
+                    </p>`;
                 } else if (field === "syak_back") {
                     card[field] = this.handleSiyuanMarkdown(card.get(field));
                 } else {
@@ -316,7 +325,6 @@ export class SYAK {
                 }
             });
         }
-
         return cmpResult;
     }
 
